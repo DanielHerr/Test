@@ -1,11 +1,28 @@
 "use strict"
 
-function test(testname = "", testcode = function(){} ) {
+Array.prototype.toString = function() { 
+ return(JSON.stringify(this, null, 1))
+}
+Object.prototype.toString = function() {
+ return(JSON.stringify(this, null, 1))
+}
+
+function test(testname = "", testcode = function() {
+ throw("TEST NOT IMPLEMENTED")
+}) {
  if(typeof(testname) == "function") {
   testcode = testname
   testname = testcode.name
  }
  testname = testname || testcode.name
+ test.total = test.total + 1
+ test.totalcounter.textContent = test.total
+ test.running = test.running + 1
+ test.runningcounter.textContent = test.running
+ let item = document.createElement("li")
+ item.id = testname.split(" ").join("_")
+ item.textContent = testname
+ test.runninglist.appendChild(item)
  let result, failed
  try {
   result = testcode()
@@ -16,56 +33,52 @@ function test(testname = "", testcode = function(){} ) {
  if(result && typeof(result.then) == "function") {
   result.then(function(result) {
    test.pass(testname, result)
-  }, function(error) {
+  }).catch(function(error) {
    test.fail(testname, error)
   })
  } else if(failed != true) {
   test.pass(testname, result)
- }
- test.totaltests = test.totaltests + 1
- test.totalcounter.textContent = test.totaltests
+} }
+
+test.end = function(testname) {
+ test.running = test.running - 1
+ test.runningcounter.textContent = test.running
+ test.runninglist.querySelector("#" + testname.split(" ").join("_")).remove()
 }
 
-test.pass = function(testname, results) {
- if(Array.isArray(results) == false) {
-  if(results === undefined) {
-   results = [ ]
-  } else {
-   results = [ results ]
- } }
- test.totalpassed = test.totalpassed + 1
- test.passedcounter.textContent = test.totalpassed
+test.pass = function(testname, result) {
+ test.end(testname)
+ test.passed = test.passed + 1
+ test.passedcounter.textContent = test.passed
  let item = document.createElement("li")
- item.textContent = testname + " : "
- for(let result of results) {
-  item.textContent = item.textContent + result + " "
+ item.id = testname.split(" ").join("_")
+ if(result !== undefined) {
+  item.textContent = testname + " : " + result
+ } else {
+  item.textContent = testname
  }
  test.passedlist.appendChild(item)
 }
 
-test.fail = function(testname, errors) {
- if(Array.isArray(errors) == false) {
-  if(errors === undefined) {
-   errors = [ ]
-  } else {
-   errors = [ errors ]
- } }
- test.totalfailed = test.totalfailed + 1
- test.failedcounter.textContent = test.totalfailed
+test.fail = function(testname, error) {
+ test.end(testname)
+ test.failed = test.failed + 1
+ test.failedcounter.textContent = test.failed
  let item = document.createElement("li")
- item.textContent = testname + " : "
- for(let error of errors) {
-  item.textContent = item.textContent + error + " "
- }
+ item.id = testname.split(" ").join("_")
+ item.textContent = testname + " : " + error
  test.failedlist.appendChild(item)
 }
 
-test.totaltests = 0
-test.totalpassed = 0
-test.totalfailed = 0
+test.total = 0
+test.running = 0
+test.passed = 0
+test.failed = 0
 
 test.totalcounter = document.querySelector("total-tests")
+test.runningcounter = document.querySelector("running-total")
 test.passedcounter = document.querySelector("passed-total")
 test.failedcounter = document.querySelector("failed-total")
+test.runninglist = document.querySelector("#running")
 test.passedlist = document.querySelector("#passed")
 test.failedlist = document.querySelector("#failed")
