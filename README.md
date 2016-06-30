@@ -1,5 +1,5 @@
 # Test
-Tests functions. Throw an error or return a value, use the pass and fail function arguments, or fullfill or reject a promise.
+Tests functions. Throw an error or return a value, use the pass or fail function arguments, or fullfill or reject a promise.
 
 Usage:
 ```
@@ -30,7 +30,7 @@ test(async function test_6() {
 ```
 Result:
 
-5 tests total<br>
+6 tests total<br>
 0 tests running<br>
 3 tests passed<br>
 3 tests failed<br>
