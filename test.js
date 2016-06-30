@@ -1,12 +1,5 @@
 "use strict"
 
-Array.prototype.toString = function() { 
- return(JSON.stringify(this, null, 1))
-}
-Object.prototype.toString = function() {
- return(JSON.stringify(this, null, 1))
-}
-
 function test(testname = "", testcode = function() {
  throw("TEST NOT IMPLEMENTED")
 }) {
@@ -15,6 +8,11 @@ function test(testname = "", testcode = function() {
   testname = testcode.name
  }
  testname = testname || testcode.name
+ Object.defineProperty(testcode, "name", {
+  configurable: true, value: testname
+ })
+ testcode.status = "running"
+ test.tests[testname] = testcode
  test.total = test.total + 1
  test.totalcounter.textContent = test.total
  test.running = test.running + 1
@@ -25,20 +23,29 @@ function test(testname = "", testcode = function() {
  test.runninglist.appendChild(item)
  let result, failed
  try {
-  result = testcode()
+  result = testcode(function(result) {
+   test.pass(testname, result)
+  }, function(error) {
+   test.fail(testname, error)
+  })
  } catch(error) {
   test.fail(testname, error)
   failed = true
  }
- if(result && typeof(result.then) == "function") {
-  result.then(function(result) {
+ if(testcode.length == 0) {
+  if(result && typeof(result.then) == "function") {
+   result.then(function(result) {
+    test.pass(testname, result)
+   }).catch(function(error) {
+    test.fail(testname, error)
+   })
+  } else if(failed != true) {
    test.pass(testname, result)
-  }).catch(function(error) {
+  }
+ } else if(result && typeof(result.catch) == "function") {
+  result.catch(function(error) {
    test.fail(testname, error)
-  })
- } else if(failed != true) {
-  test.pass(testname, result)
-} }
+}) } }
 
 test.end = function(testname) {
  test.running = test.running - 1
@@ -47,6 +54,8 @@ test.end = function(testname) {
 }
 
 test.pass = function(testname, result) {
+ test.tests[testname].status = "passed"
+ test.tests[testname].result = result
  test.end(testname)
  test.passed = test.passed + 1
  test.passedcounter.textContent = test.passed
@@ -61,6 +70,8 @@ test.pass = function(testname, result) {
 }
 
 test.fail = function(testname, error) {
+ test.tests[testname].status = "failed"
+ test.tests[testname].result = error
  test.end(testname)
  test.failed = test.failed + 1
  test.failedcounter.textContent = test.failed
@@ -69,6 +80,8 @@ test.fail = function(testname, error) {
  item.textContent = testname + " : " + error
  test.failedlist.appendChild(item)
 }
+
+test.tests = {}
 
 test.total = 0
 test.running = 0
@@ -82,3 +95,10 @@ test.failedcounter = document.querySelector("failed-total")
 test.runninglist = document.querySelector("#running")
 test.passedlist = document.querySelector("#passed")
 test.failedlist = document.querySelector("#failed")
+
+Array.prototype.toString = function() { 
+ return(JSON.stringify(this, null, 1))
+}
+Object.prototype.toString = function() {
+ return(JSON.stringify(this, null, 1))
+}
