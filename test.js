@@ -1,7 +1,7 @@
 "use strict"
 
 function test(testname = "", testcode = function() {
- throw(new Error("TEST NOT IMPLEMENTED"))
+ throw("TEST NOT IMPLEMENTED")
 }) {
  Object.defineProperty(testcode, "name", {
   configurable: true, value: testname
