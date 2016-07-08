@@ -16,6 +16,7 @@ function test(testname = "", testcode = function() {
  item.id = testname.split(" ").join("_")
  item.textContent = testname
  test.runninglist.appendChild(item)
+ test.setpadding("running")
  let result, failed
  try {
   result = testcode(function(result) {
@@ -46,6 +47,7 @@ test.end = function(testname) {
  test.running = test.running - 1
  test.runningcounter.textContent = test.running
  test.runninglist.querySelector("#" + testname.split(" ").join("_")).remove()
+ test.setpadding("running")
 }
 
 test.pass = function(testname, result) {
@@ -63,6 +65,7 @@ test.pass = function(testname, result) {
    item.textContent = testname
   }
   test.passedlist.appendChild(item)
+  test.setpadding("passed")
 } }
 
 test.fail = function(testname, error, consoleerror) {
@@ -75,6 +78,7 @@ test.fail = function(testname, error, consoleerror) {
   test.passed = test.passed - 1
   test.passedcounter.textContent = test.passed
   test.passedlist.querySelector("#" + testname.split(" ").join("_")).remove()
+  test.setpadding("passed")
  }
  test.tests[testname].status = "failed"
  test.tests[testname].result = error
@@ -84,6 +88,7 @@ test.fail = function(testname, error, consoleerror) {
  item.id = testname.split(" ").join("_")
  item.textContent = testname + " : " + error
  test.failedlist.appendChild(item)
+ test.setpadding("failed")
 }
 
 test.catch = function(error, file, line, column) {
@@ -122,6 +127,16 @@ test.catch = function(error, file, line, column) {
      test.fail(testname, error, false)
      break
 } } } }) }
+
+test.setpadding = function(list) {
+ let item = document.createElement("li")
+ item.textContent = test[list + "list"].children.length + "."
+ item.style.display = "inline-block"
+ item.style.visibility = "hidden"
+ document.body.appendChild(item)
+ test[list + "list"].style.paddingLeft = item.clientWidth + 4 + "px"
+ item.remove()
+}
 
 test.tests = {}
 test.sources = {}
