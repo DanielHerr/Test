@@ -176,13 +176,19 @@ self.addEventListener("unhandledrejection", function(event) {
   test.catch(event.reason, file, line, column)
 } })
 
-document.currentScript.remove()
 if(document.documentElement.createShadowRoot) {
  let shadow = document.documentElement.createShadowRoot()
  let testresults = document.querySelector("test-results")
  testresults.remove()
+ let head = document.createElement("head")
+ head.appendChild(document.querySelector("meta[http-equiv=Content-Security-Policy]"))
+ head.appendChild(document.currentScript)
  let body = document.createElement("body")
  body.appendChild(testresults)
+ shadow.appendChild(head)
  shadow.appendChild(body)
  shadow.appendChild(document.createElement("content"))
+} else {
+ document.currentScript.remove()
+ document.querySelector("meta[http-equiv=Content-Security-Policy]").remove()
 }
