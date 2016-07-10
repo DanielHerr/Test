@@ -3,45 +3,46 @@
 function test(testname = "", testcode = function() {
  throw("TEST NOT IMPLEMENTED")
 }) {
- Object.defineProperty(testcode, "name", {
-  configurable: true, value: testname
- })
- testcode.status = "running"
- test.tests[testname] = testcode
- test.total = test.total + 1
- test.totalcounter.textContent = test.total
- test.running = test.running + 1
- test.runningcounter.textContent = test.running
- let item = document.createElement("li")
- item.id = testname.split(" ").join("_")
- item.textContent = testname
- test.runninglist.appendChild(item)
- test.setpadding("running")
- let result, failed
- try {
-  result = testcode(function(result) {
-   test.pass(testname, result)
-  }, function(error) {
-   test.fail(testname, error)
+ test.prepareresults().then(function() {
+  Object.defineProperty(testcode, "name", {
+   configurable: true, value: testname
   })
- } catch(error) {
-  test.fail(testname, error)
-  failed = true
- }
- if(testcode.length == 0) {
-  if(result && typeof(result.then) == "function") {
-   result.then(function(result) {
+  testcode.status = "running"
+  test.tests[testname] = testcode
+  test.total = test.total + 1
+  test.totalcounter.textContent = test.total
+  test.running = test.running + 1
+  test.runningcounter.textContent = test.running
+  let item = document.createElement("li")
+  item.id = testname.split(" ").join("_")
+  item.textContent = testname
+  test.runninglist.appendChild(item)
+  test.setpadding("running")
+  let result, failed
+  try {
+   result = testcode(function(result) {
     test.pass(testname, result)
-   }).catch(function(error) {
+   }, function(error) {
     test.fail(testname, error)
    })
-  } else if(failed != true) {
-   test.pass(testname, result)
-  }
- } else if(result && typeof(result.catch) == "function") {
-  result.catch(function(error) {
+  } catch(error) {
    test.fail(testname, error)
-}) } }
+   failed = true
+  }
+  if(testcode.length == 0) {
+   if(result && typeof(result.then) == "function") {
+    result.then(function(result) {
+     test.pass(testname, result)
+    }).catch(function(error) {
+     test.fail(testname, error)
+    })
+   } else if(failed != true) {
+    test.pass(testname, result)
+   }
+  } else if(result && typeof(result.catch) == "function") {
+   result.catch(function(error) {
+    test.fail(testname, error)
+}) } }) }
 
 test.end = function(testname) {
  test.running = test.running - 1
@@ -138,6 +139,20 @@ test.setpadding = function(list) {
  item.remove()
 }
 
+test.prepareresults = function() {
+ return(new Promise(function(resolver) {
+  if(test.prepareresults.done) {
+   resolver()
+  } else {
+   if(test.prepareresults.resolvers == null) {
+    test.prepareresults.resolvers = []
+   }
+   test.prepareresults.resolvers.push(resolver)
+} })) }
+
+test.scriptelement = document.currentScript
+test.scriptelement.remove()
+
 test.tests = {}
 test.sources = {}
 
@@ -146,14 +161,6 @@ test.running = 0
 test.passed = 0
 test.failed = 0
 
-test.totalcounter = document.querySelector("total-tests")
-test.runningcounter = document.querySelector("running-total")
-test.passedcounter = document.querySelector("passed-total")
-test.failedcounter = document.querySelector("failed-total")
-test.runninglist = document.querySelector("#running")
-test.passedlist = document.querySelector("#passed")
-test.failedlist = document.querySelector("#failed")
-
 Array.prototype.toString = function() {
  return(JSON.stringify(this, null, 1))
 }
@@ -161,34 +168,57 @@ Object.prototype.toString = function() {
  return(JSON.stringify(this, null, 1))
 }
 
-self.addEventListener("error", function(event) {
- test.catch(event.error, event.filename, event.lineno, event.colno)
-})
-self.addEventListener("unhandledrejection", function(event) {
- if(event.reason && event.reason.stack) {
-  let location = event.reason.stack.slice(event.reason.stack.lastIndexOf("at") + 3)
-  let locationparts = location.split(":")
-  let column = locationparts[locationparts.length - 1]
-  let line = locationparts[locationparts.length - 2]
-  let file = location.slice(0, -(line.length + column.length + 2))
-  line = Number(line)
-  column = Number(column)
-  test.catch(event.reason, file, line, column)
-} })
+fetch(test.scriptelement.src.replace(".js", ".html")).then(function(response) {
+ return(response.text())
+}).catch(function() {
+ return(fetch(test.scriptelement.src.replace(".js", ".html")).then(function(response) {
+  return(response.text())
+ }))
+}).then(function(text) {
+ let resultsview = new DOMParser().parseFromString(text, "text/html")
 
-if(document.documentElement.createShadowRoot) {
- let shadow = document.documentElement.createShadowRoot()
- let testresults = document.querySelector("test-results")
- testresults.remove()
- let head = document.createElement("head")
- head.appendChild(document.querySelector("meta[http-equiv=Content-Security-Policy]"))
- head.appendChild(document.currentScript)
- let body = document.createElement("body")
- body.appendChild(testresults)
- shadow.appendChild(head)
- shadow.appendChild(body)
- shadow.appendChild(document.createElement("content"))
-} else {
- document.currentScript.remove()
- document.querySelector("meta[http-equiv=Content-Security-Policy]").remove()
-}
+ test.totalcounter = resultsview.querySelector("total-tests")
+ test.runningcounter = resultsview.querySelector("running-total")
+ test.passedcounter = resultsview.querySelector("passed-total")
+ test.failedcounter = resultsview.querySelector("failed-total")
+ test.runninglist = resultsview.querySelector("#running")
+ test.passedlist = resultsview.querySelector("#passed")
+ test.failedlist = resultsview.querySelector("#failed")
+
+ if(document.documentElement.createShadowRoot) {
+  let shadow = document.documentElement.createShadowRoot()
+  resultsview.head.insertBefore(test.scriptelement, resultsview.head.firstElementChild)
+  shadow.appendChild(resultsview.head)
+  shadow.appendChild(resultsview.body)
+  shadow.appendChild(document.createElement("content"))
+ } else {
+  if(document.querySelector("meta[http-equiv=Content-Security-Policy]") == null) {
+   let csp = resultsview.querySelector("meta")
+   document.head.appendChild(csp)
+   csp.remove()
+  }
+  let resultselements = resultsview.querySelector("test-results")
+  resultselements.insertBefore(resultsview.querySelector("style"), resultselements.firstElementChild)
+  document.body.insertBefore(resultselements, document.body.firstElementChild)
+ }
+ self.addEventListener("error", function(event) {
+  test.catch(event.error, event.filename, event.lineno, event.colno)
+ })
+ self.addEventListener("unhandledrejection", function(event) {
+  if(event.reason && event.reason.stack) {
+   let location = event.reason.stack.slice(event.reason.stack.lastIndexOf("at") + 3)
+   let locationparts = location.split(":")
+   let column = locationparts[locationparts.length - 1]
+   let line = locationparts[locationparts.length - 2]
+   let file = location.slice(0, -(line.length + column.length + 2))
+   line = Number(line)
+   column = Number(column)
+   test.catch(event.reason, file, line, column)
+ } })
+ test.prepareresults.done = true
+ for(let resolver of test.prepareresults.resolvers) {
+  resolver()
+ }
+}).catch(function(error) {
+ document.body.textContent = "Unable to load test results HTML: " + error
+})
