@@ -187,7 +187,7 @@ fetch(test.scriptelement.src.replace(".js", ".html")).then(function(response) {
 
  if(document.documentElement.createShadowRoot) {
   let shadow = document.documentElement.createShadowRoot()
-  resultsview.head.insertBefore(test.scriptelement, resultsview.head.firstElementChild)
+  resultsview.head.insertBefore(test.scriptelement, resultsview.head.children[1])
   shadow.appendChild(resultsview.head)
   shadow.appendChild(resultsview.body)
   shadow.appendChild(document.createElement("content"))
@@ -216,9 +216,10 @@ fetch(test.scriptelement.src.replace(".js", ".html")).then(function(response) {
    test.catch(event.reason, file, line, column)
  } })
  test.prepareresults.done = true
- for(let resolver of test.prepareresults.resolvers) {
+ for(let resolver of test.prepareresults.resolvers || []) {
   resolver()
  }
 }).catch(function(error) {
+ console.error(error)
  document.body.textContent = "Unable to load test results HTML: " + error
 })
