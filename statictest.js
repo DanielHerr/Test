@@ -183,6 +183,9 @@ if(document.documentElement.createShadowRoot) {
  let head = document.createElement("head")
  head.appendChild(document.querySelector("meta[http-equiv=Content-Security-Policy]"))
  head.appendChild(document.currentScript)
+ if(document.querySelector('script[src="tests.js"]')) {
+  head.appendChild(document.querySelector('script[src="tests.js"]'))
+ }
  head.appendChild(testresults.querySelector("style"))
  let body = document.createElement("body")
  body.appendChild(testresults)
@@ -192,4 +195,6 @@ if(document.documentElement.createShadowRoot) {
 } else {
  document.currentScript.remove()
  document.querySelector("meta[http-equiv=Content-Security-Policy]").remove()
-}
+ if(document.querySelector('script[src="tests.js"]')) {
+  document.querySelector('script[src="tests.js"]').remove()
+} }

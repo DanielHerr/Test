@@ -150,8 +150,12 @@ test.prepareresults = function() {
    test.prepareresults.resolvers.push(resolver)
 } })) }
 
-test.scriptelement = document.currentScript
-test.scriptelement.remove()
+test.mainscript = document.currentScript
+test.mainscript.remove()
+test.testsscript = document.querySelector('script[src="tests.js"]')
+if(test.testsscript) {
+ test.testsscript.remove()
+}
 
 test.tests = {}
 test.sources = {}
@@ -168,10 +172,10 @@ Object.prototype.toString = function() {
  return(JSON.stringify(this, null, 1))
 }
 
-fetch(test.scriptelement.src.replace(".js", ".html")).then(function(response) {
+fetch(test.mainscript.src.replace(".js", ".html")).then(function(response) {
  return(response.text())
 }).catch(function() {
- return(fetch(test.scriptelement.src.replace(".js", ".html")).then(function(response) {
+ return(fetch(test.mainscript.src.replace(".js", ".html")).then(function(response) {
   return(response.text())
  }))
 }).then(function(text) {
@@ -187,7 +191,10 @@ fetch(test.scriptelement.src.replace(".js", ".html")).then(function(response) {
 
  if(document.documentElement.createShadowRoot) {
   let shadow = document.documentElement.createShadowRoot()
-  resultsview.head.insertBefore(test.scriptelement, resultsview.head.children[1])
+  resultsview.head.insertBefore(test.mainscript, resultsview.head.children[1])
+  if(test.testsscript) {
+   resultsview.head.appendChild(test.testsscript)
+  }
   shadow.appendChild(resultsview.head)
   shadow.appendChild(resultsview.body)
   shadow.appendChild(document.createElement("content"))
