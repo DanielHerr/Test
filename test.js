@@ -175,7 +175,7 @@ Object.prototype.toString = function() {
 fetch(test.mainscript.src.replace(".js", ".html")).then(function(response) {
  return(response.text())
 }).catch(function() {
- return(fetch(test.mainscript.src.replace(".js", ".html")).then(function(response) {
+ return(fetch("https://danielherr.github.io/Test/test.html").then(function(response) {
   return(response.text())
  }))
 }).then(function(text) {
