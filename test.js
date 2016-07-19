@@ -97,7 +97,11 @@ test.catch = function(error, file, line, column) {
  let getsource = Promise.resolve(source)
  if(source == null) {
   getsource = fetch(file).then(function(response) {
-   return(response.text())
+   if(response.ok) {
+    return(response.text())
+   } else {
+    throw(new Error(response.statusText))
+   }
   }).then(function(source) {
    test.sources[file] = source
    return(source)
@@ -172,12 +176,21 @@ Object.prototype.toString = function() {
  return(JSON.stringify(this, null, 1))
 }
 
-fetch(test.mainscript.src.replace(".js", ".html")).then(function(response) {
- return(response.text())
+fetch("test.html").then(function(response) {
+ if(response.ok) {
+  return(response)
+ } else {
+  throw(new Error(response.statusText))
+ }
 }).catch(function() {
  return(fetch("https://danielherr.github.io/Test/test.html").then(function(response) {
-  return(response.text())
- }))
+  if(response.ok) {
+   return(response)
+  } else {
+   throw(new Error(response.statusText))
+ } }))
+}).then(function(response) {
+ return(response.text())
 }).then(function(text) {
  let resultsview = new DOMParser().parseFromString(text, "text/html")
 

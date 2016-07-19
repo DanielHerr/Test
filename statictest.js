@@ -96,7 +96,11 @@ test.catch = function(error, file, line, column) {
  let getsource = Promise.resolve(source)
  if(source == null) {
   getsource = fetch(file).then(function(response) {
-   return(response.text())
+   if(response.ok) {
+    return(response.text())
+   } else {
+    throw(new Error(response.statusText))
+   }
   }).then(function(source) {
    test.sources[file] = source
    return(source)
