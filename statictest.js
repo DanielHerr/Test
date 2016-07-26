@@ -13,7 +13,7 @@ function test(testname = "", testcode = function() {
  test.running = test.running + 1
  test.runningcounter.textContent = test.running
  let item = document.createElement("li")
- item.id = testname.split(" ").join("_")
+ item.id = testname
  item.textContent = testname
  test.runninglist.appendChild(item)
  test.setpadding("running")
@@ -46,7 +46,7 @@ function test(testname = "", testcode = function() {
 test.end = function(testname) {
  test.running = test.running - 1
  test.runningcounter.textContent = test.running
- test.runninglist.querySelector("#" + testname.split(" ").join("_")).remove()
+ test.runninglist.querySelector('[id="' + testname + '"]').remove()
  test.setpadding("running")
 }
 
@@ -58,7 +58,7 @@ test.pass = function(testname, result) {
   test.passed = test.passed + 1
   test.passedcounter.textContent = test.passed
   let item = document.createElement("li")
-  item.id = testname.split(" ").join("_")
+  item.id = testname
   if(result !== undefined) {
    item.textContent = testname + " : " + result
   } else {
@@ -69,6 +69,11 @@ test.pass = function(testname, result) {
 } }
 
 test.fail = function(testname, error, consoleerror) {
+ if(error && error.message) {
+  error.message = error.message.split("\n").join(" ")
+ } else if(typeof(error) == "string") {
+  error = error.split("\n").join(" ")
+ }
  if(consoleerror != false) {
   console.error(error)
  }
@@ -77,7 +82,7 @@ test.fail = function(testname, error, consoleerror) {
  } else if(test.tests[testname].status == "passed") {
   test.passed = test.passed - 1
   test.passedcounter.textContent = test.passed
-  test.passedlist.querySelector("#" + testname.split(" ").join("_")).remove()
+  test.passedlist.querySelector('[id="' + testname + '"]').remove()
   test.setpadding("passed")
  }
  test.tests[testname].status = "failed"
@@ -85,7 +90,7 @@ test.fail = function(testname, error, consoleerror) {
  test.failed = test.failed + 1
  test.failedcounter.textContent = test.failed
  let item = document.createElement("li")
- item.id = testname.split(" ").join("_")
+ item.id = testname
  item.textContent = testname + " : " + error
  test.failedlist.appendChild(item)
  test.setpadding("failed")
@@ -99,7 +104,7 @@ test.catch = function(error, file, line, column) {
    if(response.ok) {
     return(response.text())
    } else {
-    throw(new Error(response.statusText))
+    throw(Error(response.statusText))
    }
   }).then(function(source) {
    test.sources[file] = source
@@ -111,9 +116,9 @@ test.catch = function(error, file, line, column) {
   if(source && source.includes("test(")) {
    let errorindex = 0
    let lines = source.split("\n")
-   for(let lineindex = 0; lineindex <= line; lineindex++) {
-    if(lineindex == line) {
-     errorindex = errorindex + column
+   for(let lineindex = 0; lineindex < line; lineindex++) {
+    if(lineindex + 1 == line) {
+     errorindex = errorindex + lineindex + column
     } else {
      errorindex = errorindex + lines[lineindex].length
    } }
@@ -123,12 +128,13 @@ test.catch = function(error, file, line, column) {
    for(let testsource of testsources) {
     let stringsymbol = testsource[0]
     let testname = testsource.slice(1, testsource.indexOf(stringsymbol, 1))
-    tests[testname] = {}
-    tests[testname].start = source.indexOf("test(" + stringsymbol + testname + stringsymbol)
+    tests[testname] = source.indexOf("test(" + stringsymbol + testname + stringsymbol)
    }
    for(let testname of Object.keys(tests).reverse()) {
-    if(errorindex > tests[testname].start) {
-     test.fail(testname, error, false)
+    if(errorindex > tests[testname]) {
+     if(test.tests[testname]) {
+      test.fail(testname, error, false)
+     }
      break
 } } } }) }
 
@@ -165,20 +171,53 @@ Object.prototype.toString = function() {
  return(JSON.stringify(this, null, 1))
 }
 
+Error.prototype.toString = function() {
+ let error = this
+ let result = error.name
+ if(error.message) {
+  result = result + ": " + error.message
+ }
+ if(error.stack) {
+  let stack = error.stack.slice(error.message.length + error.name.length + 3)
+  if(stack.includes("\n")) {
+   stack = stack.slice(0, stack.indexOf("\n"))
+  }
+  let location = stack.slice(stack.lastIndexOf(" (") + 2, -1)
+  if(stack.includes(" (") == false) {
+   location = stack.slice(stack.indexOf("at") + 3)
+  }
+  let locationparts = location.split(":")
+  if(locationparts.length > 2 && location.includes("/")) {
+   let column = locationparts[locationparts.length - 1]
+   let line = locationparts[locationparts.length - 2]
+   let file = location.slice(location.lastIndexOf("/") + 1, -(line.length + column.length + 2))
+   result = result + " at " + file + ":" + line + ":" + column
+ } }
+ return(result)
+}
+
 self.addEventListener("error", function(event) {
  test.catch(event.error, event.filename, event.lineno, event.colno)
 })
 self.addEventListener("unhandledrejection", function(event) {
  if(event.reason && event.reason.stack) {
-  let location = event.reason.stack.slice(event.reason.stack.lastIndexOf("at") + 3)
+  let stack = event.reason.stack.slice(event.reason.message.length + event.reason.name.length + 3)
+  if(stack.includes("\n")) {
+   stack = stack.slice(0, stack.indexOf("\n"))
+  }
+  let location = stack.slice(stack.lastIndexOf(" (") + 2, -1)
+  if(stack.includes(" (") == false) {
+   location = stack.slice(stack.indexOf("at") + 3)
+  }
   let locationparts = location.split(":")
-  let column = locationparts[locationparts.length - 1]
-  let line = locationparts[locationparts.length - 2]
-  let file = location.slice(0, -(line.length + column.length + 2))
-  line = Number(line)
-  column = Number(column)
-  test.catch(event.reason, file, line, column)
-} })
+  if(locationparts.length > 2 && location.includes("/")) {
+   let column = locationparts[locationparts.length - 1]
+   let line = locationparts[locationparts.length - 2]
+   let file = location.slice(0, -(line.length + column.length + 2))
+   line = Number(line)
+   column = Number(column)
+   test.catch(event.reason, file, line, column)
+} } })
 
 if(document.documentElement.createShadowRoot) {
  let shadow = document.documentElement.createShadowRoot()
